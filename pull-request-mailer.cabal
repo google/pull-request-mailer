@@ -1,0 +1,90 @@
+-- Copyright 2014 Google Inc. All rights reserved.
+--
+-- Use of this source code is governed by a BSD-style
+-- license that can be found in the LICENSE file or at
+-- https://developers.google.com/open-source/licenses/bsd
+
+name:                pull-request-mailer
+version:             0.1.0.0
+license:             BSD3
+license-file:        LICENSE
+copyright:           Copyright (C) 2014 Google Inc.
+maintainer:          Ganeti Development Team <ganeti-devel@googlegroups.com>
+build-type:          Simple
+cabal-version:       >=1.10
+synopsis:            Sends a GitHub pull request as a patch series via email
+description:
+  Many open-source projects (such as the Linux kernel or the Ganeti project)
+  accept patches only via their mailing lists.
+  .
+  This tool makes it easy to integrate contributors who prefer Github pull
+  requests into mailing list review workflows.
+category:            Development, Git, Email
+
+library
+  hs-source-dirs:
+    src
+  exposed-modules:
+    Github.PullRequests.Emailer
+    Github.PullRequests.Emailer.MsgId
+    Github.PullRequests.Emailer.Opts
+  default-language:
+    Haskell2010
+  build-depends:
+      base                  >= 4.5         && < 4.8
+    , aeson                 >= 0.7.0.6     && < 0.9
+    , attoparsec            >= 0.12.1.1    && < 0.13
+    , bytestring            >= 0.10.0.2    && < 0.11
+    , command               >= 0.1.1       && < 0.2
+    , directory             >= 1.2.1.0     && < 1.3
+    , filepath              >= 1.3.0.2     && < 1.4
+    , github                >= 0.11.0      && < 0.12
+    , hsemail               >= 1.7.7       && < 1.8
+    , mtl                   >= 2           && < 3
+    , optparse-applicative  >= 0.10.0      && < 0.11
+    , parsec                >= 3.1.5       && < 3.2
+    , temporary             >= 1.2.0.3     && < 1.3
+    , text                  >= 1.1.1.3     && < 1.2
+  ghc-options:
+    -Wall
+
+executable pull-request-mailer
+  hs-source-dirs:
+    executables/pull-request-mailer
+  main-is:
+    Main.hs
+  default-language:
+    Haskell2010
+  build-depends:
+    -- Same dependencies as the library (no need for versions):
+      base
+    , pull-request-mailer
+    , optparse-applicative
+
+    -- Own dependencies (with versions):
+  ghc-options:
+    -Wall
+
+executable pull-request-mailer-server
+  hs-source-dirs:
+    executables/pull-request-mailer-server
+  main-is:
+    Main.hs
+  default-language:
+    Haskell2010
+  build-depends:
+    -- Same dependencies as the library (no need for versions):
+      base
+    , pull-request-mailer
+    , aeson
+    , bytestring
+    , github
+    , text
+
+    -- Own dependencies (with versions):
+    , cryptohash            >= 0.11        && < 0.12
+    , optparse-applicative  >= 0.10.0      && < 0.11
+    , scotty                >= 0.9         && < 0.10
+    , transformers          >= 0.3         && < 5
+  ghc-options:
+    -Wall
