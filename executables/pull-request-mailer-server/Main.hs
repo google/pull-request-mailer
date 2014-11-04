@@ -23,6 +23,7 @@ import Data.Text.Lazy.Encoding as TL
 import Github.Auth
 import Github.PullRequests
 import Options.Applicative hiding (header)
+import System.Posix.Process (forkProcess, getProcessStatus)
 import Web.Scotty
 
 import Github.PullRequests.Emailer
@@ -69,6 +70,11 @@ main = do
              \ --github-oauth-token and --discussion-location."
 
 
+-- | Runs an action in a separate unix process. Blocks until finished.
+forkWait :: IO () -> IO ()
+forkWait f = forkProcess f >>= void . getProcessStatus True False
+
+
 pullRequestToThreadServer :: GithubAuth   -- ^ Github authentication
                           -> String       -- ^ recipient email address
                           -> Maybe String -- ^ post-checkout hook program
@@ -94,7 +100,10 @@ pullRequestToThreadServer auth recipient checkoutHookCmd discussionLocation =
         let pr = pullRequestEventPullRequest pre
             prid = detailedPullRequestToPRID pr
 
-        pullRequestToThread (Just auth) prid recipient checkoutHookCmd
-          >>= postEmailerInfoComment auth prid discussionLocation
+        -- Fork process so that cd'ing into temporary directories doesn't
+        -- change the cwd of the server.
+        forkWait $
+          pullRequestToThread (Just auth) prid recipient checkoutHookCmd
+            >>= postEmailerInfoComment auth prid discussionLocation
 
       text ""
