@@ -51,11 +51,10 @@ verifySecret secret shaOpt payload = Just sign == shaOpt
 
 main :: IO ()
 main = do
-  opts <- execParser $ info (helper <*> optsParser)
-            ( fullDesc
-                -- TODO udate description for the server
-                <> progDesc "Receive GitHub pull request webbooks and send\
-                            \ the patch series via email"
+  opts <- parseOptsAndEnv id
+            -- TODO udate description for the server
+            ( progDesc "Receive GitHub pull request webbooks and send\
+                       \ the patch series via email"
             )
 
   case opts of
@@ -66,8 +65,8 @@ main = do
          , optsPostCheckoutHook   = checkoutHookCmd
          } ->
       pullRequestToThreadServer auth recipient checkoutHookCmd loc
-    _ -> die "The server needs to have thread tracking enabled and requires\
-             \ --github-oauth-token and --discussion-location."
+    _ -> die $ "The server needs to have thread tracking enabled and requires\
+               \ " ++ tokenEnvVar ++ " and --discussion-location."
 
 
 -- | Runs an action in a separate unix process. Blocks until finished.

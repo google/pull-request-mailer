@@ -11,7 +11,6 @@ https://developers.google.com/open-source/licenses/bsd
 module Main where
 
 import Control.Monad
-import Data.Monoid
 import Options.Applicative
 
 import Github.PullRequests.Emailer
@@ -26,11 +25,9 @@ main = do
       , optsPostCheckoutHook   = checkoutHookCmd
       , optsAuth               = m'auth
       }
-    ) <- execParser $ info (helper <*> ((,) <$> pridParser <*> optsParser))
-           ( fullDesc
-               <> progDesc "Sends a GitHub pull request as a patch series\
-                           \ via email"
-           )
+    ) <- parseOptsAndEnv
+           (\optsParse -> (,) <$> pridParser <*> optsParse)
+           (progDesc "Sends a GitHub pull request as a patch series via email")
 
   -- When checking command line arguments for consistency, make sure to handle
   -- any conflicts before doing any IO.
