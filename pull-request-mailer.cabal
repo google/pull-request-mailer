@@ -86,5 +86,6 @@ executable pull-request-mailer-server
     , optparse-applicative  >= 0.10.0      && < 0.11
     , scotty                >= 0.9         && < 0.10
     , transformers          >= 0.3         && < 5
+    , unix                  >= 2.5.0.0     && < 2.8
   ghc-options:
     -Wall
