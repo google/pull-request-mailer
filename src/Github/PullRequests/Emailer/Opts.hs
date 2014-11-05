@@ -10,12 +10,16 @@ https://developers.google.com/open-source/licenses/bsd
 
 module Github.PullRequests.Emailer.Opts
   ( Opts(..)
+  , tokenEnvVar
   , optsParser
   , pridParser
+  , parseOptsAndEnv
   ) where
 
 import Github.Auth
 import Options.Applicative
+import qualified Options.Applicative.Help as H
+import System.Environment (lookupEnv)
 
 import Github.PullRequests.Emailer
 
@@ -28,6 +32,11 @@ data Opts = Opts
   , optsNoThreadTracking   :: Bool
   , optsDiscussionLocation :: Maybe String
   } deriving (Eq, Ord, Show)
+
+
+-- | Env variable that can set the auth token.
+tokenEnvVar :: String
+tokenEnvVar = "PULL_REQUEST_MAILER_OAUTH_TOKEN"
 
 
 -- | Command line argument parser.
@@ -44,14 +53,7 @@ optsParser = Opts
           <> help "A program in the cloned direcotry just after checkout"
         )
       )
-  <*> optional (GithubOAuth <$> strOption
-        ( long "github-oauth-token"
-          <> metavar "TOKEN"
-          <> help "Auth token needed to post information to the pull request.\
-                  \ You can generate one at\
-                  \ https://github.com/settings/applications"
-        )
-      )
+  <*> pure Nothing -- set by env variable
   <*> switch
         ( long "no-thread-tracking"
           <> help "Disable posting thread message ID and patch iteration\
@@ -85,3 +87,39 @@ pridParser =
           ( metavar "N"
             <> help "Number of the pull request"
           )
+
+
+-- | Like `execParser`, but sets those fields of `Opts` that can be set via
+-- environment variables.
+--
+-- It allows extending the `Parser` as well as updating the help text
+-- (`InfoMod`); a help text with the full program description is the default.
+--
+-- Common usage:
+--
+-- >opts <- parseOptsAndEnv id (progDesc "This program does...")
+parseOptsAndEnv :: (Parser Opts -> Parser a) -> InfoMod a -> IO a
+parseOptsAndEnv f infoMod = do
+  envToken <- lookupEnv tokenEnvVar
+  let setEnvOpts opts = opts{ optsAuth = GithubOAuth <$> envToken
+                            }
+  execParser $
+    info
+    (helper <*> f (setEnvOpts <$> optsParser))
+    ( fullDesc
+        <> footerDoc
+             (H.unChunk $ H.vcatChunks
+                [ H.stringChunk "Available environment variables:"
+                , H.tabulate
+                    [ ( H.text tokenEnvVar
+                      , H.align . H.extractChunk $ H.paragraph
+                          "Auth token needed to write information\
+                          \ into the pull request.\
+                          \ You can generate one at\
+                          \ https://github.com/settings/applications."
+                      )
+                    ]
+                ]
+             )
+        <> infoMod
+    )
