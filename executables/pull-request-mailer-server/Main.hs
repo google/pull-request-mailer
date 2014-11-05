@@ -12,16 +12,14 @@ https://developers.google.com/open-source/licenses/bsd
 
 import Control.Monad
 import Control.Monad.IO.Class
-import Crypto.Hash
 import qualified Data.Aeson as A
-import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import Data.Monoid
-import Data.String (IsString(..))
 import Data.Text.Lazy as TL
 import Data.Text.Lazy.Encoding as TL
 import Github.Auth
 import Github.PullRequests
+import Github.Repos.Webhooks.Validate (isValidPayload)
 import Options.Applicative hiding (header)
 import System.Posix.Process (forkProcess, getProcessStatus)
 import Web.Scotty
@@ -37,18 +35,6 @@ parse payload =
     . A.decode $ payload
 
 
--- | Verifies that a given body has been properly signed by GitHub.
-verifySecret :: B.ByteString      -- ^ the secret
-             -> Maybe TL.Text     -- ^ the hash provided by the remote party
-                                  -- (if any), including 'sha1='
-             -> BL.ByteString     -- ^ the body
-             -> Bool
-verifySecret secret shaOpt payload = Just sign == shaOpt
-  where
-    hm = hmac secret (BL.toStrict payload) :: HMAC SHA1
-    sign = "sha1=" <> (fromString . show . hmacGetDigest $ hm) :: TL.Text
-
-
 main :: IO ()
 main = do
   opts <- parseOptsAndEnv id
@@ -59,12 +45,13 @@ main = do
 
   case opts of
     Opts { optsAuth               = Just auth
+         , optsSecret             = Just secret
          , optsDiscussionLocation = Just loc
          , optsNoThreadTracking   = False
          , optsRecipient          = recipient
          , optsPostCheckoutHook   = checkoutHookCmd
          } ->
-      pullRequestToThreadServer auth recipient checkoutHookCmd loc
+      pullRequestToThreadServer auth secret recipient checkoutHookCmd loc
     _ -> die $ "The server needs to have thread tracking enabled and requires\
                \ " ++ tokenEnvVar ++ " and --discussion-location."
 
@@ -75,21 +62,24 @@ forkWait f = forkProcess f >>= void . getProcessStatus True False
 
 
 pullRequestToThreadServer :: GithubAuth   -- ^ Github authentication
+                          -> String       -- ^ Hook verification secret
                           -> String       -- ^ recipient email address
                           -> Maybe String -- ^ post-checkout hook program
                           -> String       -- ^ discussion location
                           -> IO ()
-pullRequestToThreadServer auth recipient checkoutHookCmd discussionLocation =
+pullRequestToThreadServer auth
+                          secret
+                          recipient
+                          checkoutHookCmd
+                          discussionLocation =
 
   scotty 8014 $ do
     post "/" $ do
-      shaOpt <- header "X-Hub-Signature"
+      digest <- fmap TL.unpack <$> header "X-Hub-Signature"
       payload <- body
 
-      {-
-      unless (verifySecret mySecret shaOpt payload)
-             (raise "Invalid or missing SHA1 sum")
-      -}
+      unless (isValidPayload secret digest (BL.toStrict payload)) $
+        raise "Invalid or missing hook verification digest"
 
       pre <- parse payload :: ActionM PullRequestEvent
 

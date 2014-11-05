@@ -38,7 +38,7 @@ library
     , command               >= 0.1.1       && < 0.2
     , directory             >= 1.2.1.0     && < 1.3
     , filepath              >= 1.3.0.2     && < 1.4
-    , github                >= 0.11.0      && < 0.12
+    , github                >= 0.12        && < 0.13
     , hsemail               >= 1.7.7       && < 1.8
     , mtl                   >= 2           && < 3
     , optparse-applicative  >= 0.10.0      && < 0.11
@@ -82,7 +82,6 @@ executable pull-request-mailer-server
     , text
 
     -- Own dependencies (with versions):
-    , cryptohash            >= 0.11        && < 0.12
     , optparse-applicative  >= 0.10.0      && < 0.11
     , scotty                >= 0.9         && < 0.10
     , transformers          >= 0.3         && < 5

@@ -11,6 +11,7 @@ https://developers.google.com/open-source/licenses/bsd
 module Github.PullRequests.Emailer.Opts
   ( Opts(..)
   , tokenEnvVar
+  , secretEnvVar
   , optsParser
   , pridParser
   , parseOptsAndEnv
@@ -31,12 +32,18 @@ data Opts = Opts
   , optsAuth               :: Maybe GithubAuth
   , optsNoThreadTracking   :: Bool
   , optsDiscussionLocation :: Maybe String
+  , optsSecret             :: Maybe String
   } deriving (Eq, Ord, Show)
 
 
 -- | Env variable that can set the auth token.
 tokenEnvVar :: String
 tokenEnvVar = "PULL_REQUEST_MAILER_OAUTH_TOKEN"
+
+
+-- | Env variable that can set the secret webhook validation token.
+secretEnvVar :: String
+secretEnvVar = "PULL_REQUEST_MAILER_SECRET_TOKEN"
 
 
 -- | Command line argument parser.
@@ -69,6 +76,7 @@ optsParser = Opts
                   \ 'the mailing list project@example.com'."
         )
       )
+  <*> pure Nothing -- set by env variable
 
 
 -- | Command line argument parser for pull request identifiers.
@@ -101,7 +109,9 @@ pridParser =
 parseOptsAndEnv :: (Parser Opts -> Parser a) -> InfoMod a -> IO a
 parseOptsAndEnv f infoMod = do
   envToken <- lookupEnv tokenEnvVar
+  envSecret <- lookupEnv secretEnvVar
   let setEnvOpts opts = opts{ optsAuth = GithubOAuth <$> envToken
+                            , optsSecret = envSecret
                             }
   execParser $
     info
@@ -117,6 +127,12 @@ parseOptsAndEnv f infoMod = do
                           \ into the pull request.\
                           \ You can generate one at\
                           \ https://github.com/settings/applications."
+                      )
+                    , ( H.text secretEnvVar
+                      , H.align . H.extractChunk $ H.paragraph
+                          "Secret token to verify that requests really come\
+                          \ from Github. See\
+                          \ https://developer.github.com/webhooks/securing."
                       )
                     ]
                 ]
