@@ -227,7 +227,7 @@ sendPatchSeries recipient prevThreadInfo checkoutHookCmd DetailedPullRequest
                       -- `--in-reply-to` allows email header injection.
                       -- `msgId` being of type MsgId makes it safe to use here
                       -- as it carries the invariant of being a valid msg-id
-                      -- *only*.
+                      -- /only/.
                       [ "--in-reply-to=" ++ fromMsgId msgId
                       , "--reroll-count=" ++ show (lastN + 1)
                       ]

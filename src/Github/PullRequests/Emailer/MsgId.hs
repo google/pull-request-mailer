@@ -11,7 +11,7 @@ https://developers.google.com/open-source/licenses/bsd
 {-# LANGUAGE DeriveGeneric #-}
 
 module Github.PullRequests.Emailer.MsgId
-  ( MsgId(fromMsgId) -- ^ do not export constructor, see `MsgId`
+  ( MsgId(fromMsgId) -- do not export constructor, see `MsgId`
   , mkMsgId
   ) where
 
