@@ -14,6 +14,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BL
+import Data.Foldable (for_)
 import Data.Monoid
 import Data.Text.Lazy as TL
 import Data.Text.Lazy.Encoding as TL
@@ -44,16 +45,17 @@ main = do
             )
 
   case opts of
-    Opts { optsAuth               = Just auth
+    Opts { optsAuth               = m'auth
          , optsSecret             = Just secret
-         , optsDiscussionLocation = Just loc
-         , optsNoThreadTracking   = False
+         , optsDiscussionLocation = m'loc
+         , optsNoThreadTracking   = trackingOff
          , optsRecipient          = recipient
          , optsPostCheckoutHook   = checkoutHookCmd
          } ->
-      pullRequestToThreadServer auth secret recipient checkoutHookCmd loc
-    _ -> die $ "The server needs to have thread tracking enabled and requires\
-               \ " ++ tokenEnvVar ++ " and --discussion-location."
+      pullRequestToThreadServer m'auth secret recipient checkoutHookCmd
+                                (if trackingOff then Nothing else m'loc)
+    _ -> die $ "The server needs to have " ++ secretEnvVar ++ " set to verify\
+               \ GitHub's webhooks."
 
 
 -- | Runs an action in a separate unix process. Blocks until finished.
@@ -61,17 +63,18 @@ forkWait :: IO () -> IO ()
 forkWait f = forkProcess f >>= void . getProcessStatus True False
 
 
-pullRequestToThreadServer :: GithubAuth   -- ^ Github authentication
-                          -> String       -- ^ Hook verification secret
-                          -> String       -- ^ recipient email address
-                          -> Maybe String -- ^ post-checkout hook program
-                          -> String       -- ^ discussion location
+pullRequestToThreadServer :: Maybe GithubAuth -- ^ Github authentication
+                          -> String           -- ^ Hook verification secret
+                          -> String           -- ^ recipient email address
+                          -> Maybe String     -- ^ post-checkout hook program
+                          -> Maybe String     -- ^ discussion location; Nothing
+                                              --   disables posting/tracking
                           -> IO ()
-pullRequestToThreadServer auth
+pullRequestToThreadServer m'auth
                           secret
                           recipient
                           checkoutHookCmd
-                          discussionLocation =
+                          m'discussionLocation =
 
   scotty 8014 $ do
     post "/" $ do
@@ -91,8 +94,13 @@ pullRequestToThreadServer auth
 
         -- Fork process so that cd'ing into temporary directories doesn't
         -- change the cwd of the server.
-        forkWait $
-          pullRequestToThread (Just auth) prid recipient checkoutHookCmd
-            >>= postEmailerInfoComment auth prid discussionLocation
+        forkWait $ do
+          -- Pull code, send the mail.
+          tInfo <- pullRequestToThread m'auth prid recipient checkoutHookCmd
+
+          -- Post comment into PR if enabled and we have auth.
+          for_ m'auth $ \auth ->
+            for_ m'discussionLocation $ \discussionLocation ->
+              postEmailerInfoComment auth prid discussionLocation tInfo
 
       text ""
