@@ -46,17 +46,38 @@ main = do
             )
 
   case opts of
-    Opts { optsAuth               = m'auth
+    Opts { optsSecret             = Nothing } ->
+      die $ "The server needs to have " ++ secretEnvVar ++ " set to verify\
+            \ GitHub's webhooks."
+
+    Opts { optsNoThreadTracking   = False
+         , optsAuth               = Nothing
+         } ->
+      die $ "Thread tracking requires " ++ tokenEnvVar ++ " to be set."
+
+    Opts { optsNoThreadTracking   = False
+         , optsDiscussionLocation = Nothing
+         } ->
+      die $ "Thread tracking requires --discussion-location."
+
+    -- Passive mode (no thread tracking).
+    Opts { optsNoThreadTracking   = True
+         , optsAuth               = m'auth
          , optsSecret             = Just secret
-         , optsDiscussionLocation = m'loc
-         , optsNoThreadTracking   = trackingOff
          , optsRecipient          = recipient
          , optsPostCheckoutHook   = checkoutHookCmd
          } ->
-      pullRequestToThreadServer m'auth secret recipient checkoutHookCmd
-                                (if trackingOff then Nothing else m'loc)
-    _ -> die $ "The server needs to have " ++ secretEnvVar ++ " set to verify\
-               \ GitHub's webhooks."
+      pullRequestToThreadServer m'auth secret recipient checkoutHookCmd Nothing
+
+    -- Normal mode (thread tracking).
+    Opts { optsNoThreadTracking   = False
+         , optsAuth               = m'auth@(Just _)
+         , optsSecret             = Just secret
+         , optsDiscussionLocation = m'loc@(Just _)
+         , optsRecipient          = recipient
+         , optsPostCheckoutHook   = checkoutHookCmd
+         } ->
+      pullRequestToThreadServer m'auth secret recipient checkoutHookCmd m'loc
 
 
 -- | Runs an action in a separate unix process. Blocks until finished.
