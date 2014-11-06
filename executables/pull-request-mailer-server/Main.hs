@@ -21,6 +21,7 @@ import Data.Text.Lazy.Encoding as TL
 import Github.Auth
 import Github.PullRequests
 import Github.Repos.Webhooks.Validate (isValidPayload)
+import Network.HTTP.Types.Status (forbidden403)
 import Options.Applicative hiding (header)
 import System.Posix.Process (forkProcess, getProcessStatus)
 import Web.Scotty
@@ -81,8 +82,15 @@ pullRequestToThreadServer m'auth
       digest <- fmap TL.unpack <$> header "X-Hub-Signature"
       payload <- body
 
-      unless (isValidPayload secret digest (BL.toStrict payload)) $
-        raise "Invalid or missing hook verification digest"
+      if isValidPayload secret digest (BL.toStrict payload)
+        then do
+          run payload
+          text ""
+        else do
+          status forbidden403
+          text "Invalid or missing hook verification digest"
+  where
+    run payload = do
 
       pre <- parse payload :: ActionM PullRequestEvent
 
@@ -102,5 +110,3 @@ pullRequestToThreadServer m'auth
           for_ m'auth $ \auth ->
             for_ m'discussionLocation $ \discussionLocation ->
               postEmailerInfoComment auth prid discussionLocation tInfo
-
-      text ""
