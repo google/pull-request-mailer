@@ -187,7 +187,9 @@ sendPatchSeries recipient prevThreadInfo checkoutHookCmd DetailedPullRequest
     -- Clone the base.
     let uri = githubOwnerLogin baseRepoOwner ++ "/" ++ baseRepoName
     logInfo $ "Cloning " ++ uri
-    () <- cmd ("git clone git://github.com/" ++ uri) "-b" baseBranch "--depth 1" tmpDir
+    () <- cmd ("git clone git://github.com/" ++ uri) "-b" baseBranch tmpDir
+    -- ^ We don't use --depth 1 here because git will send the whole history
+    -- as patches if it cannot see a common base between our two commits.
 
     setCurrentDirectory tmpDir
 
