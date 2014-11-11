@@ -10,7 +10,7 @@ https://developers.google.com/open-source/licenses/bsd
 
 {-# LANGUAGE DeriveGeneric #-}
 
-module Github.PullRequests.Emailer.MsgId
+module Github.PullRequests.Mailer.MsgId
   ( MsgId(fromMsgId) -- do not export constructor, see `MsgId`
   , mkMsgId
   ) where

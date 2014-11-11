@@ -26,8 +26,8 @@ import Options.Applicative hiding (header)
 import System.Posix.Process (forkProcess, getProcessStatus)
 import Web.Scotty
 
-import Github.PullRequests.Emailer
-import Github.PullRequests.Emailer.Opts
+import Github.PullRequests.Mailer
+import Github.PullRequests.Mailer.Opts
 
 
 -- | A helper function that parses given data to a JSON object.
@@ -130,4 +130,4 @@ pullRequestToThreadServer m'auth
           -- Post comment into PR if enabled and we have auth.
           for_ m'auth $ \auth ->
             for_ m'discussionLocation $ \discussionLocation ->
-              postEmailerInfoComment auth prid discussionLocation tInfo
+              postMailerInfoComment auth prid discussionLocation tInfo

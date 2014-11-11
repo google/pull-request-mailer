@@ -8,7 +8,7 @@ https://developers.google.com/open-source/licenses/bsd
 
 -}
 
-module Github.PullRequests.Emailer.Opts
+module Github.PullRequests.Mailer.Opts
   ( Opts(..)
   , tokenEnvVar
   , secretEnvVar
@@ -22,7 +22,7 @@ import Options.Applicative
 import qualified Options.Applicative.Help as H
 import System.Environment (lookupEnv)
 
-import Github.PullRequests.Emailer
+import Github.PullRequests.Mailer
 
 
 -- | Command line arguments to this program.

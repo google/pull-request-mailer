@@ -13,8 +13,8 @@ module Main where
 import Control.Monad
 import Options.Applicative
 
-import Github.PullRequests.Emailer
-import Github.PullRequests.Emailer.Opts
+import Github.PullRequests.Mailer
+import Github.PullRequests.Mailer.Opts
 
 
 main :: IO ()
@@ -51,4 +51,4 @@ main = do
          , optsNoThreadTracking   = False
          } -> do
       pullRequestToThread m'auth prid recipient checkoutHookCmd
-        >>= postEmailerInfoComment auth prid loc
+        >>= postMailerInfoComment auth prid loc
