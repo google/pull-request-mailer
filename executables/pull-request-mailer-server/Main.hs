@@ -14,12 +14,14 @@ import Control.Monad
 import Control.Monad.IO.Class
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BL
+import Data.Foldable (for_)
 import Data.Monoid
 import Data.Text.Lazy as TL
 import Data.Text.Lazy.Encoding as TL
 import Github.Auth
 import Github.PullRequests
 import Github.Repos.Webhooks.Validate (isValidPayload)
+import Network.HTTP.Types.Status (forbidden403)
 import Options.Applicative hiding (header)
 import System.Posix.Process (forkProcess, getProcessStatus)
 import Web.Scotty
@@ -44,16 +46,38 @@ main = do
             )
 
   case opts of
-    Opts { optsAuth               = Just auth
+    Opts { optsSecret             = Nothing } ->
+      die $ "The server needs to have " ++ secretEnvVar ++ " set to verify\
+            \ GitHub's webhooks."
+
+    Opts { optsNoThreadTracking   = False
+         , optsAuth               = Nothing
+         } ->
+      die $ "Thread tracking requires " ++ tokenEnvVar ++ " to be set."
+
+    Opts { optsNoThreadTracking   = False
+         , optsDiscussionLocation = Nothing
+         } ->
+      die $ "Thread tracking requires --discussion-location."
+
+    -- Passive mode (no thread tracking).
+    Opts { optsNoThreadTracking   = True
+         , optsAuth               = m'auth
          , optsSecret             = Just secret
-         , optsDiscussionLocation = Just loc
-         , optsNoThreadTracking   = False
          , optsRecipient          = recipient
          , optsPostCheckoutHook   = checkoutHookCmd
          } ->
-      pullRequestToThreadServer auth secret recipient checkoutHookCmd loc
-    _ -> die $ "The server needs to have thread tracking enabled and requires\
-               \ " ++ tokenEnvVar ++ " and --discussion-location."
+      pullRequestToThreadServer m'auth secret recipient checkoutHookCmd Nothing
+
+    -- Normal mode (thread tracking).
+    Opts { optsNoThreadTracking   = False
+         , optsAuth               = m'auth@(Just _)
+         , optsSecret             = Just secret
+         , optsDiscussionLocation = m'loc@(Just _)
+         , optsRecipient          = recipient
+         , optsPostCheckoutHook   = checkoutHookCmd
+         } ->
+      pullRequestToThreadServer m'auth secret recipient checkoutHookCmd m'loc
 
 
 -- | Runs an action in a separate unix process. Blocks until finished.
@@ -61,25 +85,33 @@ forkWait :: IO () -> IO ()
 forkWait f = forkProcess f >>= void . getProcessStatus True False
 
 
-pullRequestToThreadServer :: GithubAuth   -- ^ Github authentication
-                          -> String       -- ^ Hook verification secret
-                          -> String       -- ^ recipient email address
-                          -> Maybe String -- ^ post-checkout hook program
-                          -> String       -- ^ discussion location
+pullRequestToThreadServer :: Maybe GithubAuth -- ^ Github authentication
+                          -> String           -- ^ Hook verification secret
+                          -> String           -- ^ recipient email address
+                          -> Maybe String     -- ^ post-checkout hook program
+                          -> Maybe String     -- ^ discussion location; Nothing
+                                              --   disables posting/tracking
                           -> IO ()
-pullRequestToThreadServer auth
+pullRequestToThreadServer m'auth
                           secret
                           recipient
                           checkoutHookCmd
-                          discussionLocation =
+                          m'discussionLocation =
 
   scotty 8014 $ do
     post "/" $ do
       digest <- fmap TL.unpack <$> header "X-Hub-Signature"
       payload <- body
 
-      unless (isValidPayload secret digest (BL.toStrict payload)) $
-        raise "Invalid or missing hook verification digest"
+      if isValidPayload secret digest (BL.toStrict payload)
+        then do
+          run payload
+          text ""
+        else do
+          status forbidden403
+          text "Invalid or missing hook verification digest"
+  where
+    run payload = do
 
       pre <- parse payload :: ActionM PullRequestEvent
 
@@ -91,8 +123,11 @@ pullRequestToThreadServer auth
 
         -- Fork process so that cd'ing into temporary directories doesn't
         -- change the cwd of the server.
-        forkWait $
-          pullRequestToThread (Just auth) prid recipient checkoutHookCmd
-            >>= postEmailerInfoComment auth prid discussionLocation
+        forkWait $ do
+          -- Pull code, send the mail.
+          tInfo <- pullRequestToThread m'auth prid recipient checkoutHookCmd
 
-      text ""
+          -- Post comment into PR if enabled and we have auth.
+          for_ m'auth $ \auth ->
+            for_ m'discussionLocation $ \discussionLocation ->
+              postEmailerInfoComment auth prid discussionLocation tInfo

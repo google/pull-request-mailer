@@ -187,7 +187,9 @@ sendPatchSeries recipient prevThreadInfo checkoutHookCmd DetailedPullRequest
     -- Clone the base.
     let uri = githubOwnerLogin baseRepoOwner ++ "/" ++ baseRepoName
     logInfo $ "Cloning " ++ uri
-    () <- cmd ("git clone git://github.com/" ++ uri) "-b" baseBranch "--depth 1" tmpDir
+    () <- cmd ("git clone git://github.com/" ++ uri) "-b" baseBranch tmpDir
+    -- ^ We don't use --depth 1 here because git will send the whole history
+    -- as patches if it cannot see a common base between our two commits.
 
     setCurrentDirectory tmpDir
 
@@ -265,7 +267,7 @@ sendPatchSeries recipient prevThreadInfo checkoutHookCmd DetailedPullRequest
     () <- cmd "git send-email"
               "--no-thread" -- we do threading with `format-patch` above
               "--confirm=never" -- be non-interactive
-              ["--to=" ++ recipient]
+              ["--to=" ++ recipient, "--from=" ++ seriesSubmitter]
               _PATCH_DIR_NAME
 
     return $ ThreadInfo msgId (maybe 1 (succ . tiIteration) prevThreadInfo)
