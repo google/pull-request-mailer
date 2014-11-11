@@ -1,4 +1,4 @@
-# pull-request-emailer
+# pull-request-mailer
 
 Sends a GitHub pull request as a patch series via email
 
@@ -23,10 +23,8 @@ This tool makes it easy to integrate contributors who prefer Github pull request
 ### Procesing a single pull request
 
 ```
-Usage: pull-request-emailer USER REPO N --to EMAIL
-                            [--post-checkout-hook PROGRAM]
-                            [--github-oauth-token TOKEN] [--no-thread-tracking]
-                            [--discussion-location STRING]
+Usage: pull-request-mailer USER REPO N --to EMAIL [--post-checkout-hook PROGRAM]
+                           [--no-thread-tracking] [--discussion-location STRING]
   Sends a GitHub pull request as a patch series via email
 
 Available options:
@@ -38,10 +36,6 @@ Available options:
   --to EMAIL               Email recipient
   --post-checkout-hook PROGRAM
                            A program in the cloned direcotry just after checkout
-  --github-oauth-token TOKEN
-                           Auth token needed to post information to the pull
-                           request. You can generate one at
-                           https://github.com/settings/applications
   --no-thread-tracking     Disable posting thread message ID and patch iteration
                            count into the pull request. When active, future
                            versions of the PR can not be sent as reply to the
@@ -50,15 +44,24 @@ Available options:
                            The place where the contents of the PR are discussed
                            (as opposed to the discussion being in PR comments.
                            Example: 'the mailing list project@example.com'.
+
+Available environment variables:
+  PULL_REQUEST_MAILER_OAUTH_TOKEN
+                           Auth token needed to write information into the pull
+                           request. You can generate one at
+                           https://github.com/settings/applications.
+  PULL_REQUEST_MAILER_SECRET_TOKEN
+                           Secret token to verify that requests really come from
+                           Github. See
+                           https://developer.github.com/webhooks/securing.
 ```
 
 ### Automated server mode
 
 ```
-Usage: pull-request-emailer-server --to EMAIL [--post-checkout-hook PROGRAM]
-                                   [--github-oauth-token TOKEN]
-                                   [--no-thread-tracking]
-                                   [--discussion-location STRING]
+Usage: pull-request-mailer-server --to EMAIL [--post-checkout-hook PROGRAM]
+                                  [--no-thread-tracking]
+                                  [--discussion-location STRING]
   Receive GitHub pull request webbooks and send the patch series via email
 
 Available options:
@@ -66,10 +69,6 @@ Available options:
   --to EMAIL               Email recipient
   --post-checkout-hook PROGRAM
                            A program in the cloned direcotry just after checkout
-  --github-oauth-token TOKEN
-                           Auth token needed to post information to the pull
-                           request. You can generate one at
-                           https://github.com/settings/applications
   --no-thread-tracking     Disable posting thread message ID and patch iteration
                            count into the pull request. When active, future
                            versions of the PR can not be sent as reply to the
@@ -78,6 +77,16 @@ Available options:
                            The place where the contents of the PR are discussed
                            (as opposed to the discussion being in PR comments.
                            Example: 'the mailing list project@example.com'.
+
+Available environment variables:
+  PULL_REQUEST_MAILER_OAUTH_TOKEN
+                           Auth token needed to write information into the pull
+                           request. You can generate one at
+                           https://github.com/settings/applications.
+  PULL_REQUEST_MAILER_SECRET_TOKEN
+                           Secret token to verify that requests really come from
+                           Github. See
+                           https://developer.github.com/webhooks/securing.
 ```
 
 ## Contact
