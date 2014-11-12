@@ -18,11 +18,13 @@ import Data.Foldable (for_)
 import Data.Monoid
 import Data.Text.Lazy as TL
 import Data.Text.Lazy.Encoding as TL
+import qualified Data.Text.Lazy.IO as TL
 import Github.Auth
 import Github.PullRequests
 import Github.Repos.Webhooks.Validate (isValidPayload)
 import Network.HTTP.Types.Status (forbidden403)
 import Options.Applicative hiding (header)
+import System.IO (stderr)
 import System.Posix.Process (forkProcess, getProcessStatus)
 import Web.Scotty
 
@@ -99,6 +101,14 @@ pullRequestToThreadServer m'auth
                           m'discussionLocation =
 
   scotty 8014 $ do
+    -- The exception-catching `defaultHandler` must come before the other
+    -- routes to catch its exceptions, see http://stackoverflow.com/q/26747855
+    defaultHandler $ \errText -> do
+      -- We do not want to disclose the text of IO exceptions to the client;
+      -- we log them to stderr instead.
+      liftIO $ TL.hPutStrLn stderr errText
+      text "Internal server error\r\n"
+
     post "/" $ do
       digest <- fmap TL.unpack <$> header "X-Hub-Signature"
       payload <- body
