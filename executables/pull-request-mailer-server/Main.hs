@@ -67,9 +67,11 @@ main = do
          , optsAuth               = m'auth
          , optsSecret             = Just secret
          , optsRecipient          = recipient
+         , optsReplyTo            = replyTo
          , optsPostCheckoutHook   = checkoutHookCmd
          } ->
-      pullRequestToThreadServer m'auth secret recipient checkoutHookCmd Nothing
+      pullRequestToThreadServer m'auth secret recipient replyTo
+                                checkoutHookCmd Nothing
 
     -- Normal mode (thread tracking).
     Opts { optsNoThreadTracking   = False
@@ -77,9 +79,11 @@ main = do
          , optsSecret             = Just secret
          , optsDiscussionLocation = m'loc@(Just _)
          , optsRecipient          = recipient
+         , optsReplyTo            = replyTo
          , optsPostCheckoutHook   = checkoutHookCmd
          } ->
-      pullRequestToThreadServer m'auth secret recipient checkoutHookCmd m'loc
+      pullRequestToThreadServer m'auth secret recipient replyTo
+                                checkoutHookCmd m'loc
 
 
 -- | Runs an action in a separate unix process. Blocks until finished.
@@ -90,6 +94,7 @@ forkWait f = forkProcess f >>= void . getProcessStatus True False
 pullRequestToThreadServer :: Maybe GithubAuth -- ^ Github authentication
                           -> String           -- ^ Hook verification secret
                           -> String           -- ^ recipient email address
+                          -> Maybe String     -- ^ reply-to email address
                           -> Maybe String     -- ^ post-checkout hook program
                           -> Maybe String     -- ^ discussion location; Nothing
                                               --   disables posting/tracking
@@ -97,6 +102,7 @@ pullRequestToThreadServer :: Maybe GithubAuth -- ^ Github authentication
 pullRequestToThreadServer m'auth
                           secret
                           recipient
+                          replyTo
                           checkoutHookCmd
                           m'discussionLocation =
 
@@ -135,7 +141,8 @@ pullRequestToThreadServer m'auth
         -- change the cwd of the server.
         forkWait $ do
           -- Pull code, send the mail.
-          tInfo <- pullRequestToThread m'auth prid recipient checkoutHookCmd
+          tInfo <- pullRequestToThread m'auth prid recipient replyTo
+                                       checkoutHookCmd
 
           -- Post comment into PR if enabled and we have auth.
           for_ m'auth $ \auth ->
