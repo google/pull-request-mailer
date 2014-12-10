@@ -6,7 +6,7 @@ Sends a GitHub pull request as a patch series via email
 
 ---
 
-Many open-source projects (such as the Linux kernel or the [Ganeti project](https://code.google.com/p/ganeti/)) accept patches only via their mailing lists.
+Many open-source projects (such as the Linux kernel or the [Ganeti project](http://www.ganeti.org/)) accept patches only via their mailing lists.
 
 This tool makes it easy to integrate contributors who prefer Github pull requests into mailing list review workflows.
 
@@ -92,6 +92,6 @@ Available environment variables:
 ## Contact
 
 The tool has been created and is maintained by the
-[Ganeti](https://code.google.com/p/ganeti/) team. Please send any questions to
+[Ganeti](http://www.ganeti.org/) team. Please send any questions to
 the ganeti-devel@googlegroups.com mailing list (also available
 [online](https://groups.google.com/forum/#!forum/ganeti-devel)).
