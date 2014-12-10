@@ -28,6 +28,7 @@ import Github.PullRequests.Mailer
 -- | Command line arguments to this program.
 data Opts = Opts
   { optsRecipient          :: String
+  , optsReplyTo            :: Maybe String
   , optsPostCheckoutHook   :: Maybe String
   , optsAuth               :: Maybe GithubAuth
   , optsNoThreadTracking   :: Bool
@@ -54,6 +55,13 @@ optsParser = Opts
           <> metavar "EMAIL"
           <> help "Email recipient"
         )
+  <*> optional (strOption
+        ( long "reply-to"
+          <> metavar "EMAIL"
+          <> help "Address to which responses shall be sent. Useful if\
+                  \ the sending email address shall not receive replies."
+        )
+      )
   <*> optional (strOption
         ( long "post-checkout-hook"
           <> metavar "PROGRAM"

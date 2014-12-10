@@ -22,6 +22,7 @@ main = do
   ( prid,
     opts@Opts
       { optsRecipient          = recipient
+      , optsReplyTo            = replyTo
       , optsPostCheckoutHook   = checkoutHookCmd
       , optsAuth               = m'auth
       }
@@ -34,7 +35,7 @@ main = do
 
   case opts of
     Opts { optsNoThreadTracking = True } ->
-      void $ pullRequestToThread m'auth prid recipient checkoutHookCmd
+      void $ pullRequestToThread m'auth prid recipient replyTo checkoutHookCmd
 
     Opts{ optsNoThreadTracking = False, optsAuth = Nothing } ->
       die "No authentication token was given, so we cannot track\
@@ -50,5 +51,5 @@ main = do
          , optsDiscussionLocation = Just loc
          , optsNoThreadTracking   = False
          } -> do
-      pullRequestToThread m'auth prid recipient checkoutHookCmd
+      pullRequestToThread m'auth prid recipient replyTo checkoutHookCmd
         >>= postMailerInfoComment auth prid loc

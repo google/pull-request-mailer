@@ -156,31 +156,33 @@ getMostRecentThreadInfo auth PRID{ pridUser, pridName, pridNumber } =
 
 -- | Converts a pull request to a patch series using `git format-patch`.
 sendPatchSeries :: String              -- ^ recipient email address
+                -> Maybe String        -- ^ reply-to address
                 -> Maybe ThreadInfo    -- ^ thread to reply to
                                        --   (previous iteration of the PR)
                 -> Maybe String        -- ^ post-checkout hook program
                 -> DetailedPullRequest -- ^ the pull request to convert
                 -> IO ThreadInfo
-sendPatchSeries recipient prevThreadInfo checkoutHookCmd DetailedPullRequest
-  { detailedPullRequestHtmlUrl = url
-  , detailedPullRequestUser = prOwner
-  , detailedPullRequestTitle = title
-  , detailedPullRequestBody = body
-  , detailedPullRequestHead = PullRequestCommit
-      { pullRequestCommitRef = tipBranch
-      , pullRequestCommitRepo = Repo
-          { repoName = tipRepoName
-          , repoOwner = tipRepoOwner
-          }
-      }
-  , detailedPullRequestBase = PullRequestCommit
-      { pullRequestCommitRef = baseBranch
-      , pullRequestCommitRepo = Repo
-          { repoName = baseRepoName
-          , repoOwner = baseRepoOwner
-          }
-      }
-  } = do
+sendPatchSeries recipient replyTo prevThreadInfo checkoutHookCmd
+  DetailedPullRequest
+    { detailedPullRequestHtmlUrl = url
+    , detailedPullRequestUser = prOwner
+    , detailedPullRequestTitle = title
+    , detailedPullRequestBody = body
+    , detailedPullRequestHead = PullRequestCommit
+        { pullRequestCommitRef = tipBranch
+        , pullRequestCommitRepo = Repo
+            { repoName = tipRepoName
+            , repoOwner = tipRepoOwner
+            }
+        }
+    , detailedPullRequestBase = PullRequestCommit
+        { pullRequestCommitRef = baseBranch
+        , pullRequestCommitRepo = Repo
+            { repoName = baseRepoName
+            , repoOwner = baseRepoOwner
+            }
+        }
+    } = do
 
   withSystemTempDirectory "pull-request-mailer" $ \tmpDir -> do
 
@@ -234,6 +236,7 @@ sendPatchSeries recipient prevThreadInfo checkoutHookCmd DetailedPullRequest
                       , "--reroll-count=" ++ show (lastN + 1)
                       ]
               )
+              [ "--add-header=Reply-To: " ++ addr | Just addr <- [replyTo] ]
               "--output-directory" _PATCH_DIR_NAME
               "--thread=shallow"
               ("origin/" ++ baseBranch ++ "..pullrequest/" ++ tipBranch)
@@ -337,9 +340,10 @@ pullRequestToThread :: Maybe GithubAuth -- ^ Github authentication
                     -> PRID             -- ^ wich PR to convert to an email
                                         --   thread
                     -> String           -- ^ recipient email address
+                    -> Maybe String     -- ^ reply-to address
                     -> Maybe String     -- ^ post-checkout hook program
                     -> IO ThreadInfo
-pullRequestToThread m'auth prid recipient checkoutHookCmd = do
+pullRequestToThread m'auth prid recipient replyTo checkoutHookCmd = do
   pr <- downloadPullRequest m'auth prid
   prevThreadInfo <- getMostRecentThreadInfo m'auth prid
-  sendPatchSeries recipient prevThreadInfo checkoutHookCmd pr
+  sendPatchSeries recipient replyTo prevThreadInfo checkoutHookCmd pr
